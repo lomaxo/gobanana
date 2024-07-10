@@ -2,6 +2,12 @@ import cv2
 import numpy as np
 
 class BoardReader:
+    def __init__(self, board_size) -> None:
+        self.board_size = board_size
+
+        self.board_x, self.board_y = 0,0
+        self.board_width, self.board_height = 0,0
+
     def get_rect(self, image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         blur = cv2.medianBlur(gray, 5)
@@ -23,26 +29,24 @@ class BoardReader:
         min_area = 5000
         max_area = 500000000
         rects = []
-        # image_number = 0
         x,y,w,h = 1,1,1,1
         for c in cnts:
             area = cv2.contourArea(c)
             if area > min_area and area < max_area:
                 x,y,w,h = cv2.boundingRect(c)
                 rects.append((x,y,w,h))
-                # image_number += 1
         if rects:
             return rects[0]
         else:
             return None
 
-    def start_capture(self, board_size):
+    def start_capture(self):
         cap = cv2.VideoCapture(1)
         if not cap.isOpened():
             print("Error")
             return
         
-        (x,y,board_w,board_h) = (1,1,1,1)
+        # (x,y,board_w,board_h) = (1,1,1,1)
         ret = True
         board_dimensions = None
 
@@ -57,32 +61,28 @@ class BoardReader:
             if key == 32:
                 board_dimensions = self.get_rect(resized)
                 if board_dimensions:
-                    (x,y,board_w,board_h) = board_dimensions
+                    (self.board_x,self.board_y, self.board_width, self.board_height) = board_dimensions
 
-            sw = board_w//(board_size-1)
-            sh = board_h//(board_size-1)
+            sw = self.board_width//(self.board_size-1)
+            sh = self.board_height//(self.board_size-1)
             average_val = cv2.mean(gray)
             if board_dimensions: #sh > 0 and sw > 0:
-                for i in range(0, board_size):
-                    for j in range(0, board_size):
-                        xpos = x + i*sw
-                        ypos = y + j*sh
-                        # cv2.rectangle(resized, (xpos, ypos), (xpos+sw, ypos+sh), (36,255,12), 2)
+                for i in range(0, self.board_size):
+                    for j in range(0, self.board_size):
+                        xpos = self.board_x + i*sw
+                        ypos = self.board_y + j*sh
                         value = cv2.mean(gray[ypos-sh//2:ypos+sh//2, xpos-sw//2:xpos+sw//2])
-                        if value[0] > average_val[0] + 30:
+                        if value[0] > average_val[0] + 35:
                             colour = (0,255, 0)
-                        elif value[0] < average_val[0] - 30:
+                        elif value[0] < average_val[0] - 35:
                             colour = (255, 0 ,0)
                         else:
                             colour = (0, 0 ,0)
-                        # colour = (int(v) for v in value)
-                        # print(colour)
                         cv2.rectangle(resized, (xpos-sw//2, ypos-sh//2), (xpos+sw//2, ypos+sh//2), colour, 2)
-                        # print(value)
             cv2.imshow("Video", resized)
 
         cap.release()
         cv2.destroyAllWindows()
 
-b = BoardReader()
-b.start_capture(9)
+b = BoardReader(9)
+b.start_capture()

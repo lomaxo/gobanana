@@ -1,12 +1,40 @@
 import cv2
 import numpy as np
 
+class BoardState:
+    def __init__(self, board_size) -> None:
+        self.board_size = board_size
+        self._stones = [0] * board_size * board_size
+
+    def set_stone(self, index: int, val: int):
+        self._stones[index] = val
+
+    def __str__(self):
+        ret_str = ""
+        i = 0
+        for y in range(self.board_size):
+            for x in range(self.board_size):
+                match self._stones[i]:
+                    case -1:
+                        ret_str += 'b'
+                    case 1:
+                        ret_str += 'w'
+                    case 0:
+                        ret_str += '.'
+                i += 1
+            ret_str += "\n"
+        return ret_str
+
+
 class BoardReader:
     def __init__(self, board_size) -> None:
         self.board_size = board_size
 
         self.board_x, self.board_y = 0,0
         self.board_width, self.board_height = 0,0
+
+        # self.stones = [0] * board_size * board_size
+        self.state = BoardState(board_size)
 
     def get_rect(self, image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -67,19 +95,25 @@ class BoardReader:
             sh = self.board_height//(self.board_size-1)
             average_val = cv2.mean(gray)
             if board_dimensions: #sh > 0 and sw > 0:
-                for i in range(0, self.board_size):
-                    for j in range(0, self.board_size):
+                stone_index = 0
+                for j in range(0, self.board_size):
+                    for i in range(0, self.board_size):
                         xpos = self.board_x + i*sw
                         ypos = self.board_y + j*sh
                         value = cv2.mean(gray[ypos-sh//2:ypos+sh//2, xpos-sw//2:xpos+sw//2])
                         if value[0] > average_val[0] + 35:
                             colour = (0,255, 0)
+                            self.state.set_stone(stone_index, 1)
                         elif value[0] < average_val[0] - 35:
                             colour = (255, 0 ,0)
+                            self.state.set_stone(stone_index, -1)
                         else:
-                            colour = (0, 0 ,0)
+                            colour = (0, 0 , 0)                            
+                            self.state.set_stone(stone_index, 0)
+                        stone_index += 1
                         cv2.rectangle(resized, (xpos-sw//2, ypos-sh//2), (xpos+sw//2, ypos+sh//2), colour, 2)
             cv2.imshow("Video", resized)
+            print(self.state)
 
         cap.release()
         cv2.destroyAllWindows()

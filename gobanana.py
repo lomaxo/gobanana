@@ -51,23 +51,30 @@ class BoardReader:
         # close = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
         close2 = cv2.morphologyEx(thresh2, cv2.MORPH_CLOSE, kernel, iterations=2)
 
-        cv2.imshow("close2", close2)
-
+        # cv2.imshow("close2", close2)
+        # print(cv2.__version__)
 
         # Find contours and filter using threshold area
-        contours = cv2.findContours(close2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        contours = contours[0] if len(contours) == 2 else contours[1]
-
-        min_area = 5000
-        max_area = 500000000
+        contours, hierarchy = cv2.findContours(close2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # contours = contours[0] if len(contours) == 2 else contours[1]
+        # print(f'countours: { contours}')
+        min_area = 10000
+        max_area = 500000
         rects = []
         x,y,w,h = 1,1,1,1
         for c in contours:
+  
             area = cv2.contourArea(c)
+            if area > 1000:
+                print(f'countour: { c }')
+                print(f'area: {area}')
             if area > min_area and area < max_area:
                 x,y,w,h = cv2.boundingRect(c)
                 rects.append((x,y,w,h))
-
+                image = cv2.drawContours(image, [c], 0, (0,255,0), cv2.LINE_4, 8, hierarchy)
+                # return rects[0]
+        cv2.imshow("close2", close2)
+        # cv2.imshow("image", image)
         if rects:
             return rects[0]
         else:
@@ -115,7 +122,7 @@ class BoardReader:
             if board_dimensions: #sh > 0 and sw > 0:
                 stone_index = 0
                 values = []
-                black_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,251,50) # Black
+                black_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,251,70) # Black
                 white_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,451,-18)
                 # thret, white_mask = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV+ cv2.THRESH_OTSU)
                 # thret2, thresh2 = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+ cv2.THRESH_OTSU)
@@ -153,6 +160,8 @@ class BoardReader:
                         stone_index += 1
 
                         cv2.rectangle(resized, (xpos-sw//2, ypos-sh//2), (xpos+sw//2, ypos+sh//2), colour, 2)
+                        # cv2.rectangle(resized, (xpos-sw//2, ypos-sh//2), (xpos+sw//2, ypos+sh//2), colour, 2)
+
                 # print(values)
                 # print(np.digitize(values, bins=[100, 150]))
             cv2.imshow("Video", resized)

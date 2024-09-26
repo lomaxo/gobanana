@@ -54,23 +54,25 @@ if cap.isOpened():
         ret, frame = cap.read()
         orig_shape = frame.shape
         orig_height, orig_width = orig_shape[:2]
-else:
-    print("Error")
 
-while ret:
-    ret, frame = cap.read()
-    resized = cv2.resize(frame, (600,400), interpolation = cv2.INTER_AREA)
-    
-    (x,y,w,h) = get_rect(resized)
-    sw = w//8
-    sh = h//8
-    if sh > 0 and sw > 0:
-        for sx in range(x, x+w-sw, sw):
-            for sy in range(y, y+h-sh, sh):
-                cv2.rectangle(resized, (sx, sy), (sx + sw, sy + sh), (36,255,12), 2)
-    cv2.imshow("Video", resized)
-    key = cv2.waitKey(1)
-    if key == 27:
-        break
-cap.release()
+        while ret:
+            ret, frame = cap.read()
+            resized = cv2.resize(frame, (600,400), interpolation = cv2.INTER_AREA)
+            
+            (x,y,w,h) = get_rect(resized)
+            sw = w//8
+            sh = h//8
+            if sh > 0 and sw > 0:
+                for sx in range(x, x+w-sw, sw):
+                    for sy in range(y, y+h-sh, sh):
+                        cv2.rectangle(resized, (sx, sy), (sx + sw, sy + sh), (36,255,12), 2)
+            cv2.imshow("Video", resized)
+            key = cv2.waitKey(1)
+            if key == 27:
+                break
+        cap.release()
+else:
+    print("Error starting camera")
+
+
 cv2.destroyAllWindows()

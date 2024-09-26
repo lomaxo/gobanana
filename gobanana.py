@@ -17,11 +17,11 @@ class BoardState:
             for x in range(self.board_size):
                 match self._stones[i]:
                     case -1:
-                        ret_str += 'b'
+                        ret_str += ' b '
                     case 1:
-                        ret_str += 'w'
+                        ret_str += ' w '
                     case 0:
-                        ret_str += '.'
+                        ret_str += ' . '
                 i += 1
             ret_str += "\n"
         return ret_str
@@ -48,25 +48,26 @@ class BoardReader:
         thresh = cv2.threshold(sharpen, 127, 255, cv2.THRESH_BINARY_INV)[1]
         thresh2 = cv2.adaptiveThreshold(sharpen,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,3,10)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-        close = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+        # close = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
         close2 = cv2.morphologyEx(thresh2, cv2.MORPH_CLOSE, kernel, iterations=2)
 
         cv2.imshow("close2", close2)
 
 
         # Find contours and filter using threshold area
-        cnts = cv2.findContours(close2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cnts = cnts[0] if len(cnts) == 2 else cnts[1]
+        contours = cv2.findContours(close2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = contours[0] if len(contours) == 2 else contours[1]
 
         min_area = 5000
         max_area = 500000000
         rects = []
         x,y,w,h = 1,1,1,1
-        for c in cnts:
+        for c in contours:
             area = cv2.contourArea(c)
             if area > min_area and area < max_area:
                 x,y,w,h = cv2.boundingRect(c)
                 rects.append((x,y,w,h))
+
         if rects:
             return rects[0]
         else:
@@ -92,14 +93,19 @@ class BoardReader:
                 break
             if key == 32:   # Space - recapture board position
                 board_dimensions = self.get_rect(resized)
+                print(board_dimensions)
                 if board_dimensions:
                     (self.board_x,self.board_y, self.board_width, self.board_height) = board_dimensions
             if key & 0xFF == ord('s'):
                 self.stored_states.append(deepcopy(self.state))
             if key & 0xFF == ord('r'):
-                for s in self.stored_states:
-                    print("------------")
-                    print(s)
+                # Show all stored states
+                # for s in self.stored_states:
+                #     print("------------")
+                #     print(s)
+                # Just show the most recent
+                if self.stored_states:
+                    print(self.stored_states[-1])
 
             sw = self.board_width//(self.board_size-1)
             sh = self.board_height//(self.board_size-1)
@@ -110,7 +116,7 @@ class BoardReader:
                 stone_index = 0
                 values = []
                 black_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,251,50) # Black
-                white_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,451,-80)
+                white_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,451,-18)
                 # thret, white_mask = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV+ cv2.THRESH_OTSU)
                 # thret2, thresh2 = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+ cv2.THRESH_OTSU)
                 

@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 from copy import deepcopy
 
+type ImageType = np.ndarray
+
 class BoardState:
     def __init__(self, board_size) -> None:
         self.board_size = board_size
@@ -34,11 +36,10 @@ class BoardReader:
         self.board_x, self.board_y = 0,0
         self.board_width, self.board_height = 0,0
 
-        # self.stones = [0] * board_size * board_size
         self.state = BoardState(board_size)
         self.stored_states = []
 
-    def get_rect(self, image):
+    def get_board_rect_from_img(self, image: ImageType) -> ImageType:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         blur = cv2.medianBlur(gray, 5)
         sharpen_kernel = np.array([[0,-1,0], [-1,5,-1], [0,-1,0]])
@@ -51,9 +52,6 @@ class BoardReader:
         # close = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
         close2 = cv2.morphologyEx(thresh2, cv2.MORPH_CLOSE, kernel, iterations=2)
 
-        # cv2.imshow("close2", close2)
-        # print(cv2.__version__)
-
         # Find contours and filter using threshold area
         contours, hierarchy = cv2.findContours(close2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # contours = contours[0] if len(contours) == 2 else contours[1]
@@ -61,20 +59,13 @@ class BoardReader:
         min_area = 10000
         max_area = 500000
         rects = []
-        x,y,w,h = 1,1,1,1
         for c in contours:
-  
             area = cv2.contourArea(c)
-            if area > 1000:
-                print(f'countour: { c }')
-                print(f'area: {area}')
             if area > min_area and area < max_area:
                 x,y,w,h = cv2.boundingRect(c)
                 rects.append((x,y,w,h))
                 image = cv2.drawContours(image, [c], 0, (0,255,0), cv2.LINE_4, 8, hierarchy)
-                # return rects[0]
         cv2.imshow("close2", close2)
-        # cv2.imshow("image", image)
         if rects:
             return rects[0]
         else:
@@ -86,7 +77,6 @@ class BoardReader:
             print("Error")
             return
         
-        # (x,y,board_w,board_h) = (1,1,1,1)
         ret = True
         board_dimensions = None
 
@@ -99,7 +89,7 @@ class BoardReader:
             if key == 27:   # Escape
                 break
             if key == 32:   # Space - recapture board position
-                board_dimensions = self.get_rect(resized)
+                board_dimensions = self.get_board_rect_from_img(resized)
                 print(board_dimensions)
                 if board_dimensions:
                     (self.board_x,self.board_y, self.board_width, self.board_height) = board_dimensions
@@ -110,7 +100,6 @@ class BoardReader:
 
             sw = self.board_width//(self.board_size-1)
             sh = self.board_height//(self.board_size-1)
-            # average_val = cv2.mean(gray)
             blur = cv2.medianBlur(gray, 5)
 
             if board_dimensions: #sh > 0 and sw > 0:
@@ -118,12 +107,10 @@ class BoardReader:
                 values = []
                 black_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,251,70) # Black
                 white_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,451,-18)
-                # thret, white_mask = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY_INV+ cv2.THRESH_OTSU)
-                # thret2, thresh2 = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV+ cv2.THRESH_OTSU)
                 
                 cv2.imshow('Black', black_mask)
                 cv2.imshow('White', white_mask)
-                # cv2.imshow('Add', cv2.add(thresh, thresh2))
+
 
                 for j in range(0, self.board_size):
                     for i in range(0, self.board_size):
@@ -132,20 +119,10 @@ class BoardReader:
                         black_value = cv2.mean(black_mask[ypos-sh//2:ypos+sh//2, xpos-sw//2:xpos+sw//2])
                         white_value = cv2.mean(white_mask[ypos-sh//2:ypos+sh//2, xpos-sw//2:xpos+sw//2])
 
-                        # values.append(int(value[0]))
-                        # if value[0] > average_val[0] + 35:
-                        #     colour = (0,255, 0)
-                        #     self.state.set_stone(stone_index, 1)
-                        # elif value[0] < average_val[0] - 35:
-                        #     colour = (255, 0 ,0)
-                        #     self.state.set_stone(stone_index, -1)
-                        # else:
-                        #     colour = (0, 0 , 0)                            
-                        #     self.state.set_stone(stone_index, 0)
                         if white_value[0] > 60:
                             colour = (0,255, 0)
                             self.state.set_stone(stone_index, 1)
-                        elif black_value[0] > 100:
+                        elif black_value[0] > 60:
                             colour = (255, 0 ,0)
                             self.state.set_stone(stone_index, -1)
                         else:
@@ -162,8 +139,6 @@ class BoardReader:
                             ypos = self.board_y + j*sh
                             cv2.rectangle(resized, (xpos, ypos), (xpos+sw, ypos+sh), (0,0,0), 2)
 
-                # print(values)
-                # print(np.digitize(values, bins=[100, 150]))
             cv2.imshow("Video", resized)
 
         cap.release()

@@ -8,7 +8,7 @@ class BoardState:
         self._stones = [0] * board_size * board_size
 
     def set_stone(self, index: int, val: int):
-        self._stones[index] = val
+        self._stones[index] = val       
 
     def __str__(self):
         ret_str = ""
@@ -103,14 +103,8 @@ class BoardReader:
                 print(board_dimensions)
                 if board_dimensions:
                     (self.board_x,self.board_y, self.board_width, self.board_height) = board_dimensions
-            if key & 0xFF == ord('s'):
+            if key & 0xFF == ord('d'):
                 self.stored_states.append(deepcopy(self.state))
-            if key & 0xFF == ord('r'):
-                # Show all stored states
-                # for s in self.stored_states:
-                #     print("------------")
-                #     print(s)
-                # Just show the most recent
                 if self.stored_states:
                     print(self.stored_states[-1])
 
@@ -159,8 +153,14 @@ class BoardReader:
                             self.state.set_stone(stone_index, 0)
                         stone_index += 1
 
-                        cv2.rectangle(resized, (xpos-sw//2, ypos-sh//2), (xpos+sw//2, ypos+sh//2), colour, 2)
-                        # cv2.rectangle(resized, (xpos-sw//2, ypos-sh//2), (xpos+sw//2, ypos+sh//2), colour, 2)
+                        if colour != (0,0,0):
+                            cv2.rectangle(resized, (xpos-sw//2, ypos-sh//2), (xpos+sw//2, ypos+sh//2), colour, 2)
+
+                for j in range(0, self.board_size-1):
+                        for i in range(0, self.board_size-1):
+                            xpos = self.board_x + i*sw
+                            ypos = self.board_y + j*sh
+                            cv2.rectangle(resized, (xpos, ypos), (xpos+sw, ypos+sh), (0,0,0), 2)
 
                 # print(values)
                 # print(np.digitize(values, bins=[100, 150]))

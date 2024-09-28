@@ -39,7 +39,7 @@ class BoardReader:
         self.state = BoardState(board_size)
         self.stored_states = []
 
-    def get_board_rect_from_img(self, image: ImageType) -> ImageType:
+    def process_board_image(self, image: ImageType) -> ImageType:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         blur = cv2.medianBlur(gray, 5)
         sharpen_kernel = np.array([[0,-1,0], [-1,5,-1], [0,-1,0]])
@@ -51,11 +51,17 @@ class BoardReader:
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
         # close = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
         close2 = cv2.morphologyEx(thresh2, cv2.MORPH_CLOSE, kernel, iterations=2)
+        return close2
+
+    def get_board_rect_from_img(self, image: ImageType):
+        processed_image = self.process_board_image(image)
 
         # Find contours and filter using threshold area
-        contours, hierarchy = cv2.findContours(close2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(processed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         # contours = contours[0] if len(contours) == 2 else contours[1]
         # print(f'countours: { contours}')
+
+        # TODO: Add aspect ratio test to check for square boards not rectangles.
         min_area = 10000
         max_area = 500000
         rects = []
@@ -65,14 +71,14 @@ class BoardReader:
                 x,y,w,h = cv2.boundingRect(c)
                 rects.append((x,y,w,h))
                 image = cv2.drawContours(image, [c], 0, (0,255,0), cv2.LINE_4, 8, hierarchy)
-        cv2.imshow("close2", close2)
+        cv2.imshow("close2", processed_image)
         if rects:
             return rects[0]
         else:
             return None
 
     def start_capture(self):
-        cap = cv2.VideoCapture(1)
+        cap = cv2.VideoCapture(0)
         if not cap.isOpened():
             print("Error")
             return

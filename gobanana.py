@@ -74,7 +74,7 @@ class BoardReader:
             return None
 
     def start_capture(self):
-        cap = cv2.VideoCapture(1)
+        cap = cv2.VideoCapture(0)
         if not cap.isOpened():
             print("Error starting camera")
             return
@@ -144,5 +144,5 @@ class BoardReader:
         cap.release()
         cv2.destroyAllWindows()
 
-b = BoardReader(9)
+b = BoardReader(13)
 b.start_capture()

@@ -74,7 +74,7 @@ class BoardReader:
             return None
 
     def start_capture(self):
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(1)
         if not cap.isOpened():
             print("Error starting camera")
             return
@@ -107,7 +107,7 @@ class BoardReader:
             if board_dimensions:
                 stone_index = 0
                 black_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,251,70)
-                white_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,451,-18)
+                white_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,451,-48)
                 
                 cv2.imshow('Black', black_mask)
                 cv2.imshow('White', white_mask)

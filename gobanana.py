@@ -28,7 +28,6 @@ class BoardState:
             ret_str += "\n"
         return ret_str
 
-
 class BoardReader:
     def __init__(self, board_size) -> None:
         self.board_size = board_size
@@ -40,47 +39,44 @@ class BoardReader:
         self.stored_states = []
 
     def process_board_image(self, image: ImageType) -> ImageType:
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        blur = cv2.medianBlur(gray, 5)
+        grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        blur = cv2.medianBlur(grey, 3)
         sharpen_kernel = np.array([[0,-1,0], [-1,5,-1], [0,-1,0]])
         sharpen = cv2.filter2D(blur, -1, sharpen_kernel)
 
         # Threshold and morph close
-        thresh = cv2.threshold(sharpen, 127, 255, cv2.THRESH_BINARY_INV)[1]
-        thresh2 = cv2.adaptiveThreshold(sharpen,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,3,10)
+        thresh = cv2.adaptiveThreshold(sharpen,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,3,10)
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
-        # close = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
-        close2 = cv2.morphologyEx(thresh2, cv2.MORPH_CLOSE, kernel, iterations=2)
-        return close2
+        # closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel, iterations=2)
+        dilation = cv2.dilate(thresh, kernel,iterations = 1)
+        return dilation
 
     def get_board_rect_from_img(self, image: ImageType):
         processed_image = self.process_board_image(image)
 
         # Find contours and filter using threshold area
         contours, hierarchy = cv2.findContours(processed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        # contours = contours[0] if len(contours) == 2 else contours[1]
-        # print(f'countours: { contours}')
 
         # TODO: Add aspect ratio test to check for square boards not rectangles.
-        min_area = 10000
-        max_area = 500000
         rects = []
         for c in contours:
             area = cv2.contourArea(c)
-            if area > min_area and area < max_area:
-                x,y,w,h = cv2.boundingRect(c)
-                rects.append((x,y,w,h))
+            x,y,w,h = cv2.boundingRect(c)
+            if (0.7 < (max(w,h) / min(w,h)) < 1.3):          
+                rects.append(((x,y,w,h), area))
                 image = cv2.drawContours(image, [c], 0, (0,255,0), cv2.LINE_4, 8, hierarchy)
-        cv2.imshow("close2", processed_image)
+        cv2.imshow("Processed Board Image", processed_image)
+        rects.sort(key = lambda x: x[1], reverse = True)
+        
         if rects:
-            return rects[0]
+            return rects[0][0]
         else:
             return None
 
     def start_capture(self):
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(1)
         if not cap.isOpened():
-            print("Error")
+            print("Error starting camera")
             return
         
         ret = True
@@ -89,7 +85,7 @@ class BoardReader:
         while ret:
             ret, frame = cap.read()
             resized = cv2.resize(frame, (600,400), interpolation = cv2.INTER_AREA)
-            gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+            grey = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
 
             key = cv2.waitKey(1)
             if key == 27:   # Escape
@@ -99,29 +95,27 @@ class BoardReader:
                 print(board_dimensions)
                 if board_dimensions:
                     (self.board_x,self.board_y, self.board_width, self.board_height) = board_dimensions
-            if key & 0xFF == ord('d'):
+            if key & 0xFF == ord('d'):  # Add the current board state to the list and display in the terminal
                 self.stored_states.append(deepcopy(self.state))
                 if self.stored_states:
                     print(self.stored_states[-1])
 
             sw = self.board_width//(self.board_size-1)
             sh = self.board_height//(self.board_size-1)
-            blur = cv2.medianBlur(gray, 5)
+            blur = cv2.medianBlur(grey, 5)
 
-            if board_dimensions: #sh > 0 and sw > 0:
+            if board_dimensions:
                 stone_index = 0
-                values = []
-                black_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,251,70) # Black
+                black_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV,251,70)
                 white_mask = cv2.adaptiveThreshold(blur, 255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,451,-18)
                 
                 cv2.imshow('Black', black_mask)
                 cv2.imshow('White', white_mask)
 
-
+                # loop over board to check each space for black, white or no stone
                 for j in range(0, self.board_size):
                     for i in range(0, self.board_size):
-                        xpos = self.board_x + i*sw
-                        ypos = self.board_y + j*sh
+                        xpos, ypos = self.board_x + i*sw, self.board_y + j*sh
                         black_value = cv2.mean(black_mask[ypos-sh//2:ypos+sh//2, xpos-sw//2:xpos+sw//2])
                         white_value = cv2.mean(white_mask[ypos-sh//2:ypos+sh//2, xpos-sw//2:xpos+sw//2])
 
@@ -132,18 +126,18 @@ class BoardReader:
                             colour = (255, 0 ,0)
                             self.state.set_stone(stone_index, -1)
                         else:
-                            colour = (0, 0 , 0)                            
+                            colour = (0, 0, 0)                            
                             self.state.set_stone(stone_index, 0)
                         stone_index += 1
 
-                        if colour != (0,0,0):
-                            cv2.rectangle(resized, (xpos-sw//2, ypos-sh//2), (xpos+sw//2, ypos+sh//2), colour, 2)
-
-                for j in range(0, self.board_size-1):
-                        for i in range(0, self.board_size-1):
-                            xpos = self.board_x + i*sw
-                            ypos = self.board_y + j*sh
-                            cv2.rectangle(resized, (xpos, ypos), (xpos+sw, ypos+sh), (0,0,0), 2)
+                        # if colour != (0,0,0):
+                        cv2.rectangle(resized, (xpos-sw//2, ypos-sh//2), (xpos+sw//2, ypos+sh//2), colour, 2)
+                # Draw the board grid
+                # for j in range(0, self.board_size-1):
+                #     for i in range(0, self.board_size-1):
+                #         xpos = self.board_x + i*sw
+                #         ypos = self.board_y + j*sh
+                #         cv2.rectangle(resized, (xpos, ypos), (xpos+sw, ypos+sh), (0,0,0), 2)
 
             cv2.imshow("Video", resized)
 

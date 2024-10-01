@@ -99,6 +99,8 @@ class BoardReader:
                 self.stored_states.append(deepcopy(self.state))
                 if self.stored_states:
                     print(self.stored_states[-1])
+            if key & 0xFF == ord('s'):
+                cv2.imwrite('img.jpg', resized)
 
             sw = self.board_width//(self.board_size-1)
             sh = self.board_height//(self.board_size-1)
@@ -144,5 +146,5 @@ class BoardReader:
         cap.release()
         cv2.destroyAllWindows()
 
-b = BoardReader(13)
+b = BoardReader(9)
 b.start_capture()
